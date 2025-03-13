@@ -1,0 +1,11 @@
+kimi:
+  api-key: sk-5ffXfMeREVeUDnCkaoYO24CXrQ3DARZEnyVCDjg30Ozo0bBj
+  url: https://api.moonshot.cn/v1
+server:
+  port: 8080
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/xiaomi
+    username: root
+    password: 1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
