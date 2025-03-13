@@ -7,19 +7,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class UwbToaUtil {
-	private UwbToaUtil() {}
+public class UwbToa3D {
+	private UwbToa3D() {}
 
 	public static void uwbToaTF3D(UwbEntity[] entities, double results[]) {
 		double d1,d2,d3,d4;
-		d1 = getDist(entities[0]);
-		d2 = getDist(entities[1]);
-		d3 = getDist(entities[2]);
-		d4 = getDist(entities[3]);
-		double[] p1= getP(entities[0]);
-		double[] p2= getP(entities[1]);
-		double[] p3= getP(entities[2]);
-		double[] p4= getP(entities[3]);
+		d1 = entities[0].getDist();
+		d2 = entities[1].getDist();
+		d3 = entities[2].getDist();
+		d4 = entities[3].getDist();
+		double[] p1= entities[0].getP();
+		double[] p2= entities[1].getP();
+		double[] p3= entities[2].getP();
+		double[] p4= entities[3].getP();
 
 		//double* p1, double* p2, double* p3, double* p4,
 		//    double* x, double* y, double* z
@@ -51,21 +51,6 @@ public class UwbToaUtil {
 		results[2] = (A * (F * L - H * J) - B * (E * L - H * I) + D * (E * J - F * I)) / M;
 	}
 
-	private static double getDist(UwbEntity uwbEntity) {
-		if (uwbEntity==null) {
-			return 0;
-		} else {
-			return uwbEntity.getDist();
-		}
-	}
-
-	private static double[] getP(UwbEntity uwbEntity) {
-		if (uwbEntity==null) {
-			return new double[]{0,0,0};
-		} else {
-			return uwbEntity.getP();
-		}
-	}
 
 	public static void main(String[] args) {
 		List<UwbEntity> uwbEntityList =  new ArrayList<>();
@@ -95,7 +80,7 @@ public class UwbToaUtil {
 		uwbEntityList.add(u4);
 		// 计算
 		double[] results = new double[3];
-		UwbToaUtil.uwbToaTF3D(uwbEntityList.toArray(new UwbEntity[4]), results);
+		UwbToa3D.uwbToaTF3D(uwbEntityList.toArray(new UwbEntity[4]), results);
 		System.out.println(Arrays.toString(results));
 	}
 }

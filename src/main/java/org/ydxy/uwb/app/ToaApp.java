@@ -5,7 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.ydxy.uwb.entity.UwbEntity;
 import org.ydxy.uwb.tool.FixedSizeQueue;
-import org.ydxy.uwb.utils.UwbToaUtil;
+import org.ydxy.uwb.utils.UwbToa2D;
+import org.ydxy.uwb.utils.UwbToa3D;
 
 import java.util.*;
 
@@ -29,8 +30,37 @@ public class ToaApp {
             list.add(zq);
             siteQueueMap.put(tagNum,list);
         }
-        UwbToaUtil.uwbToaTF3D(entities,results);
+        UwbToa3D.uwbToaTF3D(entities,results);
         double x=results[0],y=results[1],z=results[2];
+        LinkedList<FixedSizeQueue<Double>> list=siteQueueMap.get(tagNum);
+        FixedSizeQueue<Double> xq=list.get(0);
+        FixedSizeQueue<Double> yq=list.get(1);
+        FixedSizeQueue<Double> zq=list.get(2);
+        xq.add(x);
+        yq.add(y);
+        zq.add(z);
+        x=xq.meanFilter();
+        y=yq.meanFilter();
+        z=zq.meanFilter();
+        results[0]=x;
+        results[1]=y;
+        results[2]=z;
+    }
+
+    public static void uwbToaTF2D(UwbEntity[] entities, double results[],String tagNum){
+
+        if(!siteQueueMap.containsKey(tagNum)){
+            FixedSizeQueue<Double> xq=new FixedSizeQueue<Double>(siteQueueSize);
+            FixedSizeQueue<Double> yq=new FixedSizeQueue<Double>(siteQueueSize);
+            FixedSizeQueue<Double> zq=new FixedSizeQueue<Double>(siteQueueSize);
+            LinkedList<FixedSizeQueue<Double>> list=new LinkedList<FixedSizeQueue<Double>>();
+            list.add(xq);
+            list.add(yq);
+            list.add(zq);
+            siteQueueMap.put(tagNum,list);
+        }
+        UwbToa2D.uwbToaTF2D(entities,results);
+        double x=results[0],y=results[1],z=1.8;
         LinkedList<FixedSizeQueue<Double>> list=siteQueueMap.get(tagNum);
         FixedSizeQueue<Double> xq=list.get(0);
         FixedSizeQueue<Double> yq=list.get(1);

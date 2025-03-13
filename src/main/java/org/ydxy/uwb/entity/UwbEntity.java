@@ -24,4 +24,27 @@ public class UwbEntity implements Serializable {
 	 */
 	public double dist;
 
+	public String getDevId() {
+		return devId;
+	}
+
+	public void setDevId(String devId) {
+		this.devId = devId;
+	}
+
+	public double[] getP() {
+		return p;
+	}
+
+	public void setP(double[] p) {
+		this.p = p;
+	}
+
+	public double getDist() {
+		return dist;
+	}
+
+	public void setDist(double dist) {
+		this.dist = dist;
+	}
 }
