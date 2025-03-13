@@ -40,9 +40,9 @@ public class ToaApp {
         xq.add(x);
         yq.add(y);
         zq.add(z);
-        x=xq.meanFilter();
-        y=yq.meanFilter();
-        z=zq.meanFilter();
+        x=xq.medianFilter();
+        y=yq.medianFilter();
+        z=zq.medianFilter();
         results[0]=x;
         results[1]=y;
         results[2]=z;
