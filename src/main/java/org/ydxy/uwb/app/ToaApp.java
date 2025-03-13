@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.Getter;
 import lombok.Setter;
 import org.ydxy.uwb.entity.UwbEntity;
+import org.ydxy.uwb.tool.ExpiringFixedSizeQueue;
 import org.ydxy.uwb.tool.FixedSizeQueue;
 import org.ydxy.uwb.utils.UwbToa2D;
 import org.ydxy.uwb.utils.UwbToa3D;
@@ -14,17 +15,17 @@ public class ToaApp {
 
     @Getter
     @Setter
-    static HashMap<String, LinkedList<FixedSizeQueue<Double>>> siteQueueMap;
+    static HashMap<String, LinkedList<ExpiringFixedSizeQueue<Double>>> siteQueueMap;
     @Getter
     @Setter
     static int siteQueueSize=5;
     public static void uwbToaTF3D(UwbEntity[] entities, double results[],String tagNum){
 
         if(!siteQueueMap.containsKey(tagNum)){
-            FixedSizeQueue<Double> xq=new FixedSizeQueue<Double>(siteQueueSize);
-            FixedSizeQueue<Double> yq=new FixedSizeQueue<Double>(siteQueueSize);
-            FixedSizeQueue<Double> zq=new FixedSizeQueue<Double>(siteQueueSize);
-            LinkedList<FixedSizeQueue<Double>> list=new LinkedList<FixedSizeQueue<Double>>();
+            ExpiringFixedSizeQueue<Double> xq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
+            ExpiringFixedSizeQueue<Double> yq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
+            ExpiringFixedSizeQueue<Double> zq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
+            LinkedList<ExpiringFixedSizeQueue<Double>> list= new LinkedList<>();
             list.add(xq);
             list.add(yq);
             list.add(zq);
@@ -32,10 +33,10 @@ public class ToaApp {
         }
         UwbToa3D.uwbToaTF3D(entities,results);
         double x=results[0],y=results[1],z=results[2];
-        LinkedList<FixedSizeQueue<Double>> list=siteQueueMap.get(tagNum);
-        FixedSizeQueue<Double> xq=list.get(0);
-        FixedSizeQueue<Double> yq=list.get(1);
-        FixedSizeQueue<Double> zq=list.get(2);
+        LinkedList<ExpiringFixedSizeQueue<Double>> list=siteQueueMap.get(tagNum);
+        ExpiringFixedSizeQueue<Double> xq=list.get(0);
+        ExpiringFixedSizeQueue<Double> yq=list.get(1);
+        ExpiringFixedSizeQueue<Double> zq=list.get(2);
         xq.add(x);
         yq.add(y);
         zq.add(z);
@@ -50,10 +51,10 @@ public class ToaApp {
     public static void uwbToaTF2D(UwbEntity[] entities, double results[],String tagNum){
 
         if(!siteQueueMap.containsKey(tagNum)){
-            FixedSizeQueue<Double> xq=new FixedSizeQueue<Double>(siteQueueSize);
-            FixedSizeQueue<Double> yq=new FixedSizeQueue<Double>(siteQueueSize);
-            FixedSizeQueue<Double> zq=new FixedSizeQueue<Double>(siteQueueSize);
-            LinkedList<FixedSizeQueue<Double>> list=new LinkedList<FixedSizeQueue<Double>>();
+            ExpiringFixedSizeQueue<Double> xq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
+            ExpiringFixedSizeQueue<Double> yq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
+            ExpiringFixedSizeQueue<Double> zq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
+            LinkedList<ExpiringFixedSizeQueue<Double>> list=new LinkedList<ExpiringFixedSizeQueue<Double>>();
             list.add(xq);
             list.add(yq);
             list.add(zq);
@@ -61,10 +62,10 @@ public class ToaApp {
         }
         UwbToa2D.uwbToaTF2D(entities,results);
         double x=results[0],y=results[1],z=1.8;
-        LinkedList<FixedSizeQueue<Double>> list=siteQueueMap.get(tagNum);
-        FixedSizeQueue<Double> xq=list.get(0);
-        FixedSizeQueue<Double> yq=list.get(1);
-        FixedSizeQueue<Double> zq=list.get(2);
+        LinkedList<ExpiringFixedSizeQueue<Double>> list=siteQueueMap.get(tagNum);
+        ExpiringFixedSizeQueue<Double> xq=list.get(0);
+        ExpiringFixedSizeQueue<Double> yq=list.get(1);
+        ExpiringFixedSizeQueue<Double> zq=list.get(2);
         xq.add(x);
         yq.add(y);
         zq.add(z);
