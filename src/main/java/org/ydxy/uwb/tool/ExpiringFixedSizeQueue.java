@@ -99,6 +99,10 @@ public class ExpiringFixedSizeQueue<E extends Number> {
         }
     }
 
+    public Integer getSize(){
+        return queue.size();
+    }
+
     @Data
     @Builder
     static class ExpiringValue<E extends Number> {

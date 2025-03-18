@@ -1,8 +1,11 @@
 package org.ydxy.uwb.app;
 
 import com.alibaba.fastjson.JSONObject;
+import lombok.Builder;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 import org.ydxy.uwb.entity.UwbEntity;
 import org.ydxy.uwb.tool.ExpiringFixedSizeQueue;
 import org.ydxy.uwb.tool.FixedSizeQueue;
@@ -11,17 +14,18 @@ import org.ydxy.uwb.utils.UwbToa3D;
 
 import java.util.*;
 
+@Slf4j
 public class ToaApp {
 
     @Getter
     @Setter
-    static HashMap<String, LinkedList<ExpiringFixedSizeQueue<Double>>> siteQueueMap;
+    static HashMap<SiteQueueKey, LinkedList<ExpiringFixedSizeQueue<Double>>> siteQueueMap;
     @Getter
     @Setter
     static int siteQueueSize=10;
-    public static void uwbToaTF3D(UwbEntity[] entities, double results[],String tagNum){
-
-        if(!siteQueueMap.containsKey(tagNum)){
+    public static void uwbToaTF3D(UwbEntity[] entities, double results[],String tagNum, String mainDevId){
+        SiteQueueKey siteQueueKey=SiteQueueKey.builder().mainDevId(mainDevId).tagNum(tagNum).build();
+        if(!siteQueueMap.containsKey(siteQueueKey)){
             ExpiringFixedSizeQueue<Double> xq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
             ExpiringFixedSizeQueue<Double> yq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
             ExpiringFixedSizeQueue<Double> zq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
@@ -29,17 +33,18 @@ public class ToaApp {
             list.add(xq);
             list.add(yq);
             list.add(zq);
-            siteQueueMap.put(tagNum,list);
+            siteQueueMap.put(siteQueueKey,list);
         }
         UwbToa3D.uwbToaTF3D(entities,results);
         double x=results[0],y=results[1],z=results[2];
-        LinkedList<ExpiringFixedSizeQueue<Double>> list=siteQueueMap.get(tagNum);
+        LinkedList<ExpiringFixedSizeQueue<Double>> list=siteQueueMap.get(siteQueueKey);
         ExpiringFixedSizeQueue<Double> xq=list.get(0);
         ExpiringFixedSizeQueue<Double> yq=list.get(1);
         ExpiringFixedSizeQueue<Double> zq=list.get(2);
         xq.add(x);
         yq.add(y);
         zq.add(z);
+        log.info("滤波队列大小{}", xq.getSize());
         x=xq.medianFilter();
         y=yq.medianFilter();
         z=zq.medianFilter();
@@ -48,9 +53,9 @@ public class ToaApp {
         results[2]=z;
     }
 
-    public static void uwbToaTF2D(UwbEntity[] entities, double results[],String tagNum){
-
-        if(!siteQueueMap.containsKey(tagNum)){
+    public static void uwbToaTF2D(UwbEntity[] entities, double results[],String tagNum, String mainDevId){
+        SiteQueueKey siteQueueKey=SiteQueueKey.builder().mainDevId(mainDevId).tagNum(tagNum).build();
+        if(!siteQueueMap.containsKey(siteQueueKey)){
             ExpiringFixedSizeQueue<Double> xq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
             ExpiringFixedSizeQueue<Double> yq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
             ExpiringFixedSizeQueue<Double> zq=new ExpiringFixedSizeQueue<Double>(siteQueueSize);
@@ -58,17 +63,18 @@ public class ToaApp {
             list.add(xq);
             list.add(yq);
             list.add(zq);
-            siteQueueMap.put(tagNum,list);
+            siteQueueMap.put(siteQueueKey,list);
         }
         UwbToa2D.uwbToaTF2D(entities,results);
         double x=results[0],y=results[1],z=1.8;
-        LinkedList<ExpiringFixedSizeQueue<Double>> list=siteQueueMap.get(tagNum);
+        LinkedList<ExpiringFixedSizeQueue<Double>> list=siteQueueMap.get(siteQueueKey);
         ExpiringFixedSizeQueue<Double> xq=list.get(0);
         ExpiringFixedSizeQueue<Double> yq=list.get(1);
         ExpiringFixedSizeQueue<Double> zq=list.get(2);
         xq.add(x);
         yq.add(y);
         zq.add(z);
+        log.info("滤波队列大小:{}", xq.getSize());
         x=xq.meanFilter();
         y=yq.meanFilter();
         z=zq.meanFilter();
@@ -113,12 +119,19 @@ public class ToaApp {
         uwbEntityList.add(u4);
         // 计算
         double[] results = new double[3];
-        uwbToaTF3D(uwbEntityList.toArray(new UwbEntity[4]), results,"1");
+        uwbToaTF3D(uwbEntityList.toArray(new UwbEntity[4]), results,"1", "000000");
         System.out.println(Arrays.toString(results));
 
         JSONObject object=new JSONObject();
         object.put("entities",uwbEntityList.toArray(new UwbEntity[4]));
         System.out.println(object.toString());
+    }
+
+    @Data
+    @Builder
+    static class SiteQueueKey{
+        private String mainDevId;
+        private String tagNum;
     }
 
 }
