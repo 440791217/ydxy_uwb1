@@ -84,9 +84,9 @@ public class ToaApp {
             resultList.add(tl);
         }
         List<Double> jjs=new LinkedList<>();
-        for(List<Double> result:resultList){
-            double x2=result.get(0);
-            double y2=result.get(1);
+        for(List<Double> tl:resultList){
+            double x2=tl.get(0);
+            double y2=tl.get(1);
             double jj=0;
             for(UwbEntity entity:entities){
                 double x1=entity.getP()[0];
