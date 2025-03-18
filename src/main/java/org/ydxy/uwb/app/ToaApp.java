@@ -73,9 +73,18 @@ public class ToaApp {
         LinkedList<List<Double>> resultList=new LinkedList<>();
         for(List<Integer> com:combs){
             UwbEntity[] myEntities=new UwbEntity[3];
-            myEntities[0]=entities[com.get(0)];
-            myEntities[1]=entities[com.get(1)];
-            myEntities[2]=entities[com.get(2)];
+//            System.out.println(myEntities.length);
+            int a,b,c;
+            a=com.get(0)-1;
+            b=com.get(1)-1;
+            c=com.get(2)-1;
+//            System.out.println(a);
+//            System.out.println(b);
+//            System.out.println(c);
+//            System.out.println(entities.length);
+            myEntities[0]=entities[a];
+            myEntities[1]=entities[b];
+            myEntities[2]=entities[c];
             UwbToa2D.uwbToaTF2D(myEntities,results);
             List<Double> tl=new LinkedList<>();
             tl.add(results[0]);
@@ -166,7 +175,7 @@ public class ToaApp {
         uwbEntityList.add(u4);
         // 计算
         double[] results = new double[3];
-        uwbToaTF3D(uwbEntityList.toArray(new UwbEntity[4]), results,"1", "000000");
+        uwbToaTF2D(uwbEntityList.toArray(new UwbEntity[4]), results,"1", "000000");
         System.out.println(Arrays.toString(results));
 
         JSONObject object=new JSONObject();
