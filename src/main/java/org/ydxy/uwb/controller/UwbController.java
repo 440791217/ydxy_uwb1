@@ -31,7 +31,7 @@ public class UwbController {
         String mainDevId= (String) body.getOrDefault("mainDevId", "000000");
 
         if(entities.length>3){
-            ToaApp.uwbToaTF3D(entities,results,tagNum, mainDevId);
+            ToaApp.uwbToaTF2D(entities,results,tagNum, mainDevId);
         }else if(entities.length==3){
             ToaApp.uwbToaTF2D(entities,results,tagNum, mainDevId);
         }else{

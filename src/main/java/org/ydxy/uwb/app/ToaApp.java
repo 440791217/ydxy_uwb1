@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.ydxy.uwb.entity.UwbEntity;
 import org.ydxy.uwb.tool.ExpiringFixedSizeQueue;
 import org.ydxy.uwb.tool.FixedSizeQueue;
+import org.ydxy.uwb.tool.UwbComb;
 import org.ydxy.uwb.utils.UwbToa2D;
 import org.ydxy.uwb.utils.UwbToa3D;
 
@@ -65,8 +66,54 @@ public class ToaApp {
             list.add(zq);
             siteQueueMap.put(siteQueueKey,list);
         }
-        UwbToa2D.uwbToaTF2D(entities,results);
-        double x=results[0],y=results[1],z=1.8;
+        //
+        UwbComb combinations = new UwbComb();
+        int n = entities.length, k = 3; // 比如从1到4中选2个数字的所有组合方式
+        List<List<Integer>> combs = combinations.combine(n, k);
+        LinkedList<List<Double>> resultList=new LinkedList<>();
+        for(List<Integer> com:combs){
+            UwbEntity[] myEntities=new UwbEntity[3];
+            myEntities[0]=entities[com.get(0)];
+            myEntities[1]=entities[com.get(1)];
+            myEntities[2]=entities[com.get(2)];
+            UwbToa2D.uwbToaTF2D(myEntities,results);
+            List<Double> tl=new LinkedList<>();
+            tl.add(results[0]);
+            tl.add(results[1]);
+            tl.add(results[2]);
+            resultList.add(tl);
+        }
+        List<Double> jjs=new LinkedList<>();
+        for(List<Double> result:resultList){
+            double x2=result.get(0);
+            double y2=result.get(1);
+            double jj=0;
+            for(UwbEntity entity:entities){
+                double x1=entity.getP()[0];
+                double y1=entity.getP()[1];
+                double x0=x2-x1,y0=y2-y1;
+                double dist=x0*x0+y0*y0;
+                dist=Math.sqrt(dist);
+                jj+=dist;
+            }
+            jjs.add(jj);
+        }
+        // 求 jjs 中最小值所在的标签值
+        double minValue = Double.MAX_VALUE;
+        int minIndex = -1;
+        for (int i = 0; i < jjs.size(); i++) {
+            double value = jjs.get(i);
+            if (value < minValue) {
+                minValue = value;
+                minIndex = i;
+            }
+        }
+        double x=resultList.get(minIndex).get(0),y=resultList.get(minIndex).get(1),z=1.8;
+        //
+//        if(0){
+//            UwbToa2D.uwbToaTF2D(entities,results);
+//            double x=results[0],y=results[1],z=1.8;
+//        }
         LinkedList<ExpiringFixedSizeQueue<Double>> list=siteQueueMap.get(siteQueueKey);
         ExpiringFixedSizeQueue<Double> xq=list.get(0);
         ExpiringFixedSizeQueue<Double> yq=list.get(1);
@@ -75,9 +122,9 @@ public class ToaApp {
         yq.add(y);
         zq.add(z);
         log.info("滤波队列大小:{}", xq.getSize());
-        x=xq.meanFilter();
-        y=yq.meanFilter();
-        z=zq.meanFilter();
+        x=xq.medianFilter();
+        y=yq.medianFilter();
+        z=zq.medianFilter();
         results[0]=x;
         results[1]=y;
         results[2]=z;
