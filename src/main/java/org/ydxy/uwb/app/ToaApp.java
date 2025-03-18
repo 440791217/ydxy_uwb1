@@ -108,9 +108,9 @@ public class ToaApp {
             jjs.add(jj);
         }
         // 求 jjs 中最小值所在的标签值
-        double minValue = Double.MAX_VALUE;
-        int minIndex = -1;
-        for (int i = 0; i < jjs.size(); i++) {
+        double minValue = jjs.get(0);
+        int minIndex = 0;
+        for (int i = 1; i < jjs.size(); i++) {
             double value = jjs.get(i);
             if (value < minValue) {
                 minValue = value;
