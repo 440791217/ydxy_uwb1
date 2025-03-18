@@ -18,7 +18,7 @@ public class ToaApp {
     static HashMap<String, LinkedList<ExpiringFixedSizeQueue<Double>>> siteQueueMap;
     @Getter
     @Setter
-    static int siteQueueSize=5;
+    static int siteQueueSize=10;
     public static void uwbToaTF3D(UwbEntity[] entities, double results[],String tagNum){
 
         if(!siteQueueMap.containsKey(tagNum)){

@@ -13,7 +13,7 @@ public class ExpiringFixedSizeQueue<E extends Number> {
     /**
      * 过期时间，单位为毫秒，默认为2秒
      */
-    private final int EXPIRE_MILLISECONDS = 2000;
+    private final int EXPIRE_MILLISECONDS = 10000;
 
     public ExpiringFixedSizeQueue(int maxSize) {
         this.maxSize = maxSize;
