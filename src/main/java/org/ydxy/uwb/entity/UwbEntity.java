@@ -13,7 +13,8 @@ public class UwbEntity implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	public String devId;
-
+	public String tagId;
+	public long ts;
 	/**
 	 * 坐标，依次x,y,z
 	 */
@@ -24,27 +25,4 @@ public class UwbEntity implements Serializable {
 	 */
 	public double dist;
 
-	public String getDevId() {
-		return devId;
-	}
-
-	public void setDevId(String devId) {
-		this.devId = devId;
-	}
-
-	public double[] getP() {
-		return p;
-	}
-
-	public void setP(double[] p) {
-		this.p = p;
-	}
-
-	public double getDist() {
-		return dist;
-	}
-
-	public void setDist(double dist) {
-		this.dist = dist;
-	}
 }

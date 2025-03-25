@@ -1,5 +1,6 @@
 package org.ydxy.uwb.app;
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import lombok.Builder;
 import lombok.Data;
@@ -8,14 +9,16 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.ydxy.uwb.entity.UwbEntity;
 import org.ydxy.uwb.tool.ExpiringFixedSizeQueue;
-import org.ydxy.uwb.tool.FixedSizeQueue;
+import org.ydxy.uwb.tool.Filtering;
 import org.ydxy.uwb.tool.UwbComb;
 import org.ydxy.uwb.utils.UwbToa2D;
 import org.ydxy.uwb.utils.UwbToa3D;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
+@Data
 public class ToaApp {
 
     @Getter
@@ -137,6 +140,125 @@ public class ToaApp {
         results[0]=x;
         results[1]=y;
         results[2]=z;
+    }
+
+
+    public static JSONArray uwbToaTF2DofList(List<UwbEntity> distances){
+        JSONArray ja=new JSONArray();
+//        ExpiringFixedSizeQueue<Double> xq1=new ExpiringFixedSizeQueue<>(10);
+//        ExpiringFixedSizeQueue<Double> yq1=new ExpiringFixedSizeQueue<>(10);
+//        ExpiringFixedSizeQueue<Double> xq2=new ExpiringFixedSizeQueue<>(20);
+//        ExpiringFixedSizeQueue<Double> yq2=new ExpiringFixedSizeQueue<>(20);
+        ArrayList<Double> xl=new ArrayList<>();
+        ArrayList<Double> yl=new ArrayList<>();
+        int tsDif=50;
+        distances.sort(Comparator.comparingLong(UwbEntity::getTs));
+        HashMap<String,UwbEntity> gwMaps=new HashMap<>();
+//        double x1=0,y1=0;
+//        double x2=0,y2=0;
+        for (UwbEntity t : distances) {
+//            x1=x2;
+//            y1=y2;
+            gwMaps.put(t.getDevId(), t);
+            List<UwbEntity> valueList = new ArrayList<>(gwMaps.values());
+//            System.out.println("ls:"+valueList.size());
+            long tsNow = t.getTs();
+            long tsBegin=tsNow-tsDif;
+            // 使用流操作过滤
+            valueList = valueList.stream()
+                    .filter(entity -> entity.getTs() >= tsBegin)
+                    .collect(Collectors.toList());
+            double[] results={0,0,0};
+            findBest2d(valueList,results);
+            if(results[0]==0&&results[1]==0&results[2]==0){
+                continue;
+            }
+            xl.add(results[0]);
+            yl.add(results[1]);
+//            xq1.add(results[0]);
+//            yq1.add(results[1]);
+//            x2=xq1.medianFilter();
+//            y2=yq1.medianFilter();
+//            xq2.add(x2);
+//            yq2.add(y2);
+//            JSONObject object=new JSONObject();
+//            object.put("x",xq2.meanFilter());
+//            object.put("y",yq2.meanFilter());
+//            object.put("z",1.8*100);
+//            object.put("ts",tsNow);
+//            ja.add(object);
+        }
+        xl=Filtering.medianFilter(xl,11);
+        yl=Filtering.medianFilter(yl,11);
+        xl=Filtering.meanFilter(xl,30);
+        yl=Filtering.meanFilter(yl,30);
+        for(int i=0;i<xl.size();i++){
+            JSONObject object=new JSONObject();
+            object.put("x",xl.get(i));
+            object.put("y",yl.get(i));
+//            object.put("z",1.8*100);
+//            object.put("ts",tsNow);
+            ja.add(object);
+        }
+        return ja;
+    }
+
+    public static void findBest2d(List<UwbEntity> entities, double[] results){
+        if (entities.size() < 3) {
+            return;
+        }
+        UwbComb combinations = new UwbComb();
+        int n = entities.size();
+        List<List<Integer>> combs = combinations.combine(n, 3);
+        LinkedList<List<Double>> resultList=new LinkedList<>();
+        for(List<Integer> com:combs){
+            UwbEntity[] myEntities=new UwbEntity[3];
+            int a,b,c;
+            UwbEntity entity;
+            a=com.get(0)-1;
+            b=com.get(1)-1;
+            c=com.get(2)-1;
+
+            myEntities[0]=entities.get(a);
+            myEntities[1]=entities.get(b);
+            myEntities[2]=entities.get(c);
+            UwbToa2D.uwbToaTF2D(myEntities,results);
+            List<Double> tl=new LinkedList<>();
+            tl.add(results[0]);
+            tl.add(results[1]);
+            tl.add(results[2]);
+            resultList.add(tl);
+        }
+        LinkedList<Double> jjs=new LinkedList<>();
+        for(List<Double> tl:resultList){
+            double x2=tl.get(0);
+            double y2=tl.get(1);
+            double jj=0;
+            for(UwbEntity entity:entities){
+                double x1=entity.getP()[0];
+                double y1=entity.getP()[1];
+                double x0=x2-x1,y0=y2-y1;
+                double dist=x0*x0+y0*y0;
+                dist=Math.sqrt(dist);
+                jj+=dist;
+            }
+            jjs.add(jj);
+        }
+        // 求 jjs 中最小值所在的标签值
+        double minValue = jjs.get(0);
+        int minIndex = 0;
+        for (int i = 1; i < jjs.size(); i++) {
+            double value = jjs.get(i);
+            if (value < minValue) {
+                minValue = value;
+                minIndex = i;
+            }
+        }
+        double x=resultList.get(minIndex).get(0),y=resultList.get(minIndex).get(1),z=1.8;
+        results[0]=x;
+        results[1]=y;
+        results[2]=z;
+//        System.out.println(results);
     }
 
     public static void init(){

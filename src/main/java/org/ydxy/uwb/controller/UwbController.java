@@ -1,6 +1,7 @@
 package org.ydxy.uwb.controller;
 
 
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -9,10 +10,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.ydxy.uwb.app.ToaApp;
 import org.ydxy.uwb.entity.UwbEntity;
+import org.ydxy.uwb.entity.UwbEntity1;
 import org.ydxy.uwb.http.HttpResponse;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 @Slf4j
 @RequestMapping("/uwb")
@@ -55,5 +59,35 @@ public class UwbController {
 
         log.info("************完成************");
         return  HttpResponse.getResponse(object).toString();
+    }
+
+    @PostMapping("/toa3d_of_list")
+    public String uwbToaTF3DofList(@RequestBody JSONObject body){
+        JSONArray ja=body.getJSONArray("distances");
+        List<UwbEntity1> distances1=ja.toJavaList(UwbEntity1.class);
+        ArrayList<UwbEntity> distances2=new ArrayList<>();
+        for(UwbEntity1 t1:distances1){
+            UwbEntity t2=new UwbEntity();
+            t2.setTagId(t1.getTagID());
+            t2.setDevId(t1.getTargetGatewayId());
+            t2.setTs(t1.getTs());
+            t2.setDist(t1.getDistance());
+            double[] p=new double[3];
+            p[0]=t1.getTargetGatewayX();
+            p[1]=t1.getTargetGatewayY();
+            p[2]=t1.getTargetGatewayZ();
+            t2.setP(p);
+            distances2.add(t2);
+        }
+        JSONArray results=ToaApp.uwbToaTF2DofList(distances2);
+        JSONObject rsp=new JSONObject();
+        rsp.put("results",results);
+        rsp.put("rc",0);
+        return HttpResponse.getResponse(rsp).toString();
+    }
+
+    public static void main(String[] args){
+
+
     }
 }
