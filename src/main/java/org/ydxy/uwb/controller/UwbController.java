@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.ydxy.uwb.app.ToaApp;
+import org.ydxy.uwb.entity.PointEntity;
 import org.ydxy.uwb.entity.UwbEntity;
 import org.ydxy.uwb.entity.UwbEntity1;
 import org.ydxy.uwb.http.HttpResponse;
@@ -63,6 +64,8 @@ public class UwbController {
 
     @PostMapping("/toa3d_of_list")
     public String uwbToaTF3DofList(@RequestBody JSONObject body){
+        log.info("************开始************");
+        log.info("收到:{}", body);
         JSONArray ja=body.getJSONArray("distances");
         List<UwbEntity1> distances1=ja.toJavaList(UwbEntity1.class);
         ArrayList<UwbEntity> distances2=new ArrayList<>();
@@ -79,10 +82,12 @@ public class UwbController {
             t2.setP(p);
             distances2.add(t2);
         }
-        JSONArray results=ToaApp.uwbToaTF2DofList(distances2);
+        List<PointEntity> results=ToaApp.uwbToaTF2DofList(distances2);
         JSONObject rsp=new JSONObject();
         rsp.put("results",results);
         rsp.put("rc",0);
+        log.info("返回:{}", rsp);
+        log.info("************完成************");
         return HttpResponse.getResponse(rsp).toString();
     }
 

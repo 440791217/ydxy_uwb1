@@ -1,14 +1,21 @@
 package org.ydxy.uwb.tool;
 
+import lombok.Builder;
+import lombok.Data;
+
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class FixedSizeQueue<E extends Number> {
-    private final Queue<E> queue;
+public class ExpiringFixedSizeNumberAnalysisQueue<E extends Number> {
+    private final Queue<ExpiringValue> queue;
     private final int maxSize;
+    /**
+     * 过期时间，单位为毫秒，默认为2秒
+     */
+    private final int EXPIRE_MILLISECONDS = 10000;
 
-    public FixedSizeQueue(int maxSize) {
+    public ExpiringFixedSizeNumberAnalysisQueue(int maxSize) {
         this.maxSize = maxSize;
         this.queue = new LinkedList<>();
     }
@@ -18,10 +25,21 @@ public class FixedSizeQueue<E extends Number> {
      * @param element 要添加的元素
      */
     public void add(E element) {
+        // 清理过期元素
+        cleanUp();
         if (queue.size() >= maxSize) {
             queue.poll();
         }
-        queue.add(element);
+        ExpiringValue<Number> wrapElement = ExpiringValue.builder()
+                .value(element)
+                .expirationTime(System.currentTimeMillis())
+                .build();
+        queue.add(wrapElement);
+    }
+
+    private void cleanUp() {
+        long currentTime = System.currentTimeMillis();
+        queue.removeIf(entry ->currentTime - entry.getExpirationTime() > EXPIRE_MILLISECONDS);
     }
 
     /**
@@ -41,8 +59,8 @@ public class FixedSizeQueue<E extends Number> {
             return 0;
         }
         double sum = 0;
-        for (E element : queue) {
-            sum += element.doubleValue();
+        for (ExpiringValue element : queue) {
+            sum += element.getValue().doubleValue();
         }
         return sum / queue.size();
     }
@@ -57,8 +75,8 @@ public class FixedSizeQueue<E extends Number> {
         }
         double[] array = new double[queue.size()];
         int index = 0;
-        for (E element : queue) {
-            array[index++] = element.doubleValue();
+        for (ExpiringValue element : queue) {
+            array[index++] = element.getValue().doubleValue();
         }
         Arrays.sort(array);
         int middle = array.length / 2;
@@ -70,7 +88,7 @@ public class FixedSizeQueue<E extends Number> {
     }
 
     public static void main(String[] args) {
-        FixedSizeQueue<Double> fixedSizeQueue = new FixedSizeQueue<>(10);
+        ExpiringFixedSizeNumberAnalysisQueue<Double> fixedSizeQueue = new ExpiringFixedSizeNumberAnalysisQueue<>(10);
 
         // 模拟添加数据
         for (int i = 0; i < 15; i++) {
@@ -79,5 +97,16 @@ public class FixedSizeQueue<E extends Number> {
             System.out.println("均值滤波结果: " + fixedSizeQueue.meanFilter());
             System.out.println("中值滤波结果: " + fixedSizeQueue.medianFilter());
         }
+    }
+
+    public Integer getSize(){
+        return queue.size();
+    }
+
+    @Data
+    @Builder
+    static class ExpiringValue<E extends Number> {
+        private E value;
+        private Long expirationTime;
     }
 }
