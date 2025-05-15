@@ -13,6 +13,7 @@ import org.ydxy.uwb.entity.PointEntity;
 import org.ydxy.uwb.entity.UwbEntity;
 import org.ydxy.uwb.entity.UwbEntity1;
 import org.ydxy.uwb.http.HttpResponse;
+import org.ydxy.uwb.utils.UwbInner;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -85,6 +86,30 @@ public class UwbController {
         List<PointEntity> results=ToaApp.uwbToaTF2DofList(distances2);
         JSONObject rsp=new JSONObject();
         rsp.put("results",results);
+        rsp.put("rc",0);
+        log.info("返回:{}", rsp);
+        log.info("************完成************");
+        return HttpResponse.getResponse(rsp).toString();
+    }
+
+    @PostMapping("/toa2d_of_inner")
+    public String uwbToaTF3DofInner(@RequestBody JSONObject body){
+        log.info("************开始************");
+        log.info("收到数据:{}", body);
+        UwbEntity[] entities=body.getObject("entities",UwbEntity[].class);
+        double x1=entities[0].p[0],y1=entities[0].p[1],dist1=entities[0].dist;
+        double x2=entities[1].p[0],y2=entities[1].p[1],dist2=entities[1].dist;
+        List<UwbInner.Point> list=UwbInner.calculateIntersections(x1,y1,dist1,x2,y2,dist2);
+        if (list.isEmpty()) {
+            System.out.println("两圆无交点");
+        } else {
+            System.out.println("两圆的交点坐标为：");
+            for (UwbInner.Point p : list) {
+                System.out.println(p);
+            }
+        }
+        JSONObject rsp=new JSONObject();
+        rsp.put("results",list);
         rsp.put("rc",0);
         log.info("返回:{}", rsp);
         log.info("************完成************");
