@@ -99,7 +99,7 @@ public class UwbController {
         UwbEntity[] entities=body.getObject("entities",UwbEntity[].class);
         double x1=entities[0].p[0],y1=entities[0].p[1],dist1=entities[0].dist;
         double x2=entities[1].p[0],y2=entities[1].p[1],dist2=entities[1].dist;
-        List<UwbInner.Point> list=UwbInner.calculateIntersections(x1,y1,dist1,x2,y2,dist2);
+        List<UwbInner.Point> list=UwbInner.solve(x1,y1,dist1,x2,y2,dist2);
         if (list.isEmpty()) {
             System.out.println("两圆无交点");
         } else {

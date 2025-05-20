@@ -8,7 +8,8 @@ import java.util.List;
 
 
 public class UwbInner {
-
+    /** 浮点数比较容差 */
+    private static final double EPSILON = 1e-9;
     static class Entity{
 
     }
@@ -30,102 +31,87 @@ public class UwbInner {
     }
 
     /**
-     * 计算两圆的交点坐标
-     *
-     * @param x1 第一个圆的圆心x坐标
-     * @param y1 第一个圆的圆心y坐标
-     * @param r1 第一个圆的半径
-     * @param x2 第二个圆的圆心x坐标
-     * @param y2 第二个圆的圆心y坐标
-     * @param r2 第二个圆的半径
-     * @return 包含交点的列表，如果没有交点则返回空列表
+     * 求解两个圆方程的交点
+     * @param x1 第一个圆心x坐标
+     * @param y1 第一个圆心y坐标
+     * @param r1 第一个圆半径
+     * @param x2 第二个圆心x坐标
+     * @param y2 第二个圆心y坐标
+     * @param r2 第二个圆半径
+     * @return 交点列表，如果没有交点返回空列表
      */
-    public static List<Point> calculateIntersections(double x1, double y1, double r1,
-                                                     double x2, double y2, double r2) {
-        List<Point> intersections = new ArrayList<>();
+    public static List<Point> solve(double x1, double y1, double r1, double x2, double y2, double r2) {
+        List<Point> result = new ArrayList<>();
 
-        // 计算两圆心之间的距离的平方
+        // 计算两圆心之间的距离
         double dx = x2 - x1;
         double dy = y2 - y1;
         double dSquared = dx * dx + dy * dy;
         double d = Math.sqrt(dSquared);
 
-        // 处理特殊情况
-        if (dSquared == 0) {
-            // 两圆心重合
-            if (r1 == r2) {
-                // 两圆完全重合，有无穷多个交点，返回空列表表示无法确定
-                return intersections;
+        // 处理圆心重合的情况
+        if (d < EPSILON) {
+            if (Math.abs(r1 - r2) < EPSILON) {
+                // 同心圆且半径相等，有无穷多个解
+                return null;
             } else {
-                // 同心圆，半径不同，无交点
-                return intersections;
+                // 同心圆但半径不等，没有解
+                return result;
             }
         }
 
-        // 检查两圆是否相离或一个圆完全包含另一个圆
-        if (d > r1 + r2 || d < Math.abs(r1 - r2)) {
-            return intersections;
+        // 检查是否没有交点（相离或包含）
+        if (d > r1 + r2 + EPSILON || d < Math.abs(r1 - r2) - EPSILON) {
+            return result;
         }
 
-        // 计算根轴直线方程的参数 (Ax + By + C = 0)
-        double A = 2 * dx;
-        double B = 2 * dy;
-        double C = r1 * r1 - r2 * r2 - dx * dx - dy * dy;
+        // 计算辅助变量
+        double a = (r1 * r1 - r2 * r2 + dSquared) / (2 * d);
+        double hSquared = r1 * r1 - a * a;
 
-        if (B == 0) {
-            // 直线垂直于x轴，直接解x
-            double x = -C / A;
-            double discriminant = r1 * r1 - (x - x1) * (x - x1);
-
-            if (discriminant < 0) {
-                return intersections; // 无实数解
-            }
-
-            double sqrtDiscriminant = Math.sqrt(discriminant);
-            double y1Val = y1 + sqrtDiscriminant;
-            double y2Val = y1 - sqrtDiscriminant;
-
-            intersections.add(new Point(x, y1Val));
-            if (Math.abs(y1Val - y2Val) > 1e-9) { // 检查是否为两个不同的点
-                intersections.add(new Point(x, y2Val));
-            }
-        } else {
-            // 直线不垂直于x轴，解 y = mx + b 形式
-            double m = -A / B;
-            double b = -C / B;
-
-            // 代入第一个圆的方程，求解一元二次方程
-            double coeffA = 1 + m * m;
-            double coeffB = 2 * (x1 + m * (y1 - b));
-            double coeffC = x1 * x1 + (y1 - b) * (y1 - b) - r1 * r1;
-
-            double discriminant = coeffB * coeffB - 4 * coeffA * coeffC;
-
-            if (discriminant < 0) {
-                return intersections; // 无实数解
-            }
-
-            double sqrtDiscriminant = Math.sqrt(discriminant);
-            double x1Val = (-coeffB + sqrtDiscriminant) / (2 * coeffA);
-            double x2Val = (-coeffB - sqrtDiscriminant) / (2 * coeffA);
-            double y1Val = m * x1Val + b;
-            double y2Val = m * x2Val + b;
-
-            intersections.add(new Point(x1Val, y1Val));
-            if (Math.abs(x1Val - x2Val) > 1e-9 || Math.abs(y1Val - y2Val) > 1e-9) {
-                intersections.add(new Point(x2Val, y2Val));
-            }
+        // 如果h²为负，则没有实根（数值误差可能导致微小负数）
+        if (hSquared < -EPSILON) {
+            return result;
         }
 
-        return intersections;
+        double h = Math.sqrt(Math.max(0, hSquared));
+
+        // 计算中心线的单位向量
+        double cx = (x2 - x1) / d;
+        double cy = (y2 - y1) / d;
+
+        // 计算中心线的中点
+        double mx = x1 + a * cx;
+        double my = y1 + a * cy;
+
+        // 如果h为0，表示相切，只有一个交点
+        if (h < EPSILON) {
+            result.add(new Point(mx, my));
+            return result;
+        }
+
+        // 计算两个交点（相交情况）
+        double perpCx = -cy;
+        double perpCy = cx;
+
+        double x3 = mx + h * perpCx;
+        double y3 = my + h * perpCy;
+        double x4 = mx - h * perpCx;
+        double y4 = my - h * perpCy;
+
+        result.add(new Point(x3, y3));
+        result.add(new Point(x4, y4));
+
+        return result;
     }
+
 
     public static void main(String[] args) {
         // 示例：计算两个圆的交点
-        double x1 = 10, y1 = 10, r1 = 5;  // 第一个圆的圆心和半径
-        double x2 = 20, y2 = 10, r2 = 7;  // 第二个圆的圆心和半径
+        double x1 = 1000, y1 = 1000, r1 = 100;  // 第一个圆的圆心和半径
+        double x2 = 1000, y2 = 1200, r2 = 100;  // 第二个圆的圆心和半径
 
-        List<Point> intersections = calculateIntersections(x1, y1, r1, x2, y2, r2);
+        List<Point> intersections = solve(x1, y1, r1, x2, y2, r2);
 
         if (intersections.isEmpty()) {
             System.out.println("两圆无交点");
