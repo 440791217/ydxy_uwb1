@@ -100,19 +100,27 @@ public class UwbController {
         double x1=entities[0].p[0],y1=entities[0].p[1],dist1=entities[0].dist;
         double x2=entities[1].p[0],y2=entities[1].p[1],dist2=entities[1].dist;
         List<UwbInner.Point> list=UwbInner.solve(x1,y1,dist1,x2,y2,dist2);
+        List list1=new ArrayList();
         if (list.isEmpty()) {
-            System.out.println("两圆无交点");
+//            System.out.println("两圆无交点");
         } else {
-            System.out.println("两圆的交点坐标为：");
-            for (UwbInner.Point p : list) {
-                System.out.println(p);
-            }
+//            System.out.println("两圆的交点坐标为：");
+//            for (UwbInner.Point p : list) {
+////                System.out.println(p);
+////                ja.add(p);
+////                JSONObject obj=new JSONObject();
+////                obj.put("x",p.get)
+//            }
         }
         JSONObject rsp=new JSONObject();
         rsp.put("results",list);
         rsp.put("rc",0);
+//        System.out.println(rsp.toString());
         log.info("返回:{}", rsp);
         log.info("************完成************");
+//        for (Object p : rsp.getJSONArray("results")) {
+//            System.out.println(p);
+//        }
         return HttpResponse.getResponse(rsp).toString();
     }
 
