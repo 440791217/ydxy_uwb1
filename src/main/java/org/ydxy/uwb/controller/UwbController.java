@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.ydxy.uwb.app.TdoaApp;
 import org.ydxy.uwb.app.ToaApp;
 import org.ydxy.uwb.entity.PointEntity;
 import org.ydxy.uwb.entity.UwbEntity;
@@ -124,6 +125,36 @@ public class UwbController {
         return HttpResponse.getResponse(rsp).toString();
     }
 
+    @PostMapping("/tdoa")
+    public String uwbTdoa(@RequestBody String body){
+        log.info("************开始************");
+        log.info("收到数据:{}", body);
+        JSONArray array=JSONArray.parseArray(body);
+        List<TdoaApp.Input> inputs=new ArrayList<>();
+        for(Object object : array){
+                JSONObject obj=JSONObject.parseObject(object.toString());
+                long ts=obj.getLong("ts");
+                long tagId=obj.getLong("tagId");
+                List<String> gatewayIdList= obj.getJSONArray("gatewayIdList").toJavaList(String.class);
+                List<Double> xList = obj.getJSONArray("gatewayXList").toJavaList(Double.class);
+                List<Double> yList = obj.getJSONArray("gatewayYList").toJavaList(Double.class);
+                List<Double> zList = obj.getJSONArray("gatewayZList").toJavaList(Double.class);
+                List<Double> timeDiff=obj.getJSONArray("timeDiff").toJavaList(Double.class);
+
+                TdoaApp.Input input=new TdoaApp.Input();
+                input.ts=ts;
+                input.tagId=tagId;
+                input.xList=xList;
+                input.yList=yList;
+                input.zList=zList;
+                input.tdoaData=timeDiff;
+                inputs.add(input);
+        }
+
+        TdoaApp.uwbTdoa(inputs);
+
+        return "hello";
+    }
     public static void main(String[] args){
 
 
