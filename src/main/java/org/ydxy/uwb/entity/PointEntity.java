@@ -9,4 +9,6 @@ public class PointEntity {
     private double x;
     private double y;
     private String tagId;
+    private long ts;
+    private String devId;
 }

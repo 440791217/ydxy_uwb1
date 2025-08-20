@@ -10,7 +10,7 @@ public class ExpiringFixedSizeQueue<T> {
     private final Queue<ExpiringValue<T>> queue;
     private final int maxSize;
     private final Long expireMillis;
-    private boolean isFull=false;
+    private boolean isFull = false;
 
     public ExpiringFixedSizeQueue(int maxSize, Long expireMillis) {
         this.maxSize = maxSize;
@@ -24,11 +24,11 @@ public class ExpiringFixedSizeQueue<T> {
      * @param element 要添加的元素
      */
     public void add(T element, Long ts) {
-        this.isFull=false;
+        this.isFull = false;
         while (queue.size() >= maxSize || (queue.peek() != null && (ts - queue.peek().ts > this.expireMillis))) {
             queue.poll();
             if (!queue.isEmpty()) {
-                this.isFull=true;
+                this.isFull = true;
             }
         }
         ExpiringValue<T> value = ExpiringValue.<T>builder().value(element).ts(ts).build();
@@ -61,5 +61,9 @@ public class ExpiringFixedSizeQueue<T> {
 
     public boolean isFull() {
         return isFull;
+    }
+
+    public T peek() {
+        return queue.peek() == null ? null : queue.peek().getValue();
     }
 }

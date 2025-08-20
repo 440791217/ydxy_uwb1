@@ -16,6 +16,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import static java.lang.Double.NaN;
+
 @Slf4j
 @Data
 public class ToaApp {
@@ -143,15 +145,17 @@ public class ToaApp {
     }
 
     static Map<SiteQueueKey, UwbEntity> KEY_TO_UWB_ENTITY_MAP = new ConcurrentHashMap<>();
+    // 缓存，用于中值滤波
     static Map<String, ExpiringFixedSizeQueue<PointEntity>> TAG_ID_TO_POINT_QUEUE_FOR_MEDIAN_MAP = new ConcurrentHashMap<>();
+    // 缓存，用于均值滤波
     static Map<String, ExpiringFixedSizeQueue<PointEntity>> TAG_ID_TO_POINT_QUEUE_FOR_MEAN_MAP = new ConcurrentHashMap<>();
 
     public static List<PointEntity> uwbToaTF2DofList(List<UwbEntity> uwbEntityList) {
         // 窗口大小
         int MEDIAN_WINDOW_SIZE = 1000;
-        long MEDIAN_WINDOW_MILLS_SIZE = 4000L;
+        long MEDIAN_WINDOW_MILLS_SIZE = 5000L;
         int MEAN_WINDOW_SIZE = 1000;
-        long MEAN_WINDOW_MILLS_SIZE = 4000L;
+        long MEAN_WINDOW_MILLS_SIZE = 2000L;
         // 排序
         uwbEntityList.sort(Comparator.comparingLong(UwbEntity::getTs));
         List<PointEntity> resList = new ArrayList<>();
@@ -164,27 +168,30 @@ public class ToaApp {
             KEY_TO_UWB_ENTITY_MAP.put(key, uwbEntity);
             // 从缓存中取出可用于计算的uwbEntity列表
             List<UwbEntity> uwbEntityForCalList = getUwbEntityForCalList(uwbEntity);
+            if (uwbEntityForCalList.size() < 3) {
+                continue;
+            }
             // 计算坐标
             double[] results = {0, 0, 0};
             findBest2d(uwbEntityForCalList, results);
             double x = results[0];
             double y = results[1];
             double z = results[2];
-            if (x == 0 && y == 0 & z == 0) {
+            if (x == 0 || y == 0 || Double.isNaN(x) || Double.isNaN(y)) {
                 continue;
             }
-            PointEntity pointEntity = PointEntity.builder().x(x).y(y).tagId(tagId).build();
+            PointEntity pointEntity = PointEntity.builder().x(x).y(y).ts(ts).tagId(tagId).devId(devId).build();
             // 中值滤波
             TAG_ID_TO_POINT_QUEUE_FOR_MEDIAN_MAP.putIfAbsent(tagId, new ExpiringFixedSizeQueue<>(MEDIAN_WINDOW_SIZE, MEDIAN_WINDOW_MILLS_SIZE));
             ExpiringFixedSizeQueue<PointEntity> queueForMedian = TAG_ID_TO_POINT_QUEUE_FOR_MEDIAN_MAP.get(tagId);
             queueForMedian.add(pointEntity, ts);
-            if (!queueForMedian.isFull()) {
+            if (!queueForMedian.isFull() && queueForMedian.getSize()<5) {
                 // 不够中值窗口，先不算
                 continue;
             }
             x = Filtering.getMedian(queueForMedian.toList().stream().map(PointEntity::getX).collect(Collectors.toList()));
             y = Filtering.getMedian(queueForMedian.toList().stream().map(PointEntity::getY).collect(Collectors.toList()));
-            pointEntity = PointEntity.builder().x(x).y(y).tagId(tagId).build();
+            pointEntity = PointEntity.builder().x(x).y(y).ts(ts).tagId(tagId).devId(devId).build();
             // 均值滤波
             TAG_ID_TO_POINT_QUEUE_FOR_MEAN_MAP.putIfAbsent(tagId, new ExpiringFixedSizeQueue<>(MEAN_WINDOW_SIZE, MEAN_WINDOW_MILLS_SIZE));
             ExpiringFixedSizeQueue<PointEntity> queueForMean = TAG_ID_TO_POINT_QUEUE_FOR_MEAN_MAP.get(tagId);
@@ -195,7 +202,7 @@ public class ToaApp {
             }
             x = Filtering.getMean(queueForMean.toList().stream().map(PointEntity::getX).collect(Collectors.toList()));
             y = Filtering.getMean(queueForMean.toList().stream().map(PointEntity::getY).collect(Collectors.toList()));
-            pointEntity = PointEntity.builder().x(x).y(y).tagId(tagId).build();
+            pointEntity = PointEntity.builder().x(x).y(y).ts(ts).tagId(tagId).devId(devId).build();
             // 返回
             resList.add(pointEntity);
         }
