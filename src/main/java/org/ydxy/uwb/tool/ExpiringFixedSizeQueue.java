@@ -24,12 +24,8 @@ public class ExpiringFixedSizeQueue<T> {
      * @param element 要添加的元素
      */
     public void add(T element, Long ts) {
-        this.isFull = false;
-        while (queue.size() >= maxSize || (queue.peek() != null && (ts - queue.peek().ts > this.expireMillis))) {
+        while (queue.size() >= maxSize || (queue.peek() != null && ((ts - queue.peek().ts) > this.expireMillis))) {
             queue.poll();
-            if (!queue.isEmpty()) {
-                this.isFull = true;
-            }
         }
         ExpiringValue<T> value = ExpiringValue.<T>builder().value(element).ts(ts).build();
         queue.add(value);

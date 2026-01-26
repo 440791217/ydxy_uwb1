@@ -14,6 +14,7 @@ import org.ydxy.uwb.utils.UwbToa3D;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 import static java.lang.Double.NaN;
@@ -24,7 +25,7 @@ public class ToaApp {
 
     @Getter
     @Setter
-    static HashMap<SiteQueueKey, LinkedList<ExpiringFixedSizeNumberAnalysisQueue<Double>>> siteQueueMap;
+    static ConcurrentHashMap<SiteQueueKey, CopyOnWriteArrayList<ExpiringFixedSizeNumberAnalysisQueue<Double>>> siteQueueMap;
     @Getter
     @Setter
     static int siteQueueSize = 10;
@@ -35,7 +36,7 @@ public class ToaApp {
             ExpiringFixedSizeNumberAnalysisQueue<Double> xq = new ExpiringFixedSizeNumberAnalysisQueue<Double>(siteQueueSize);
             ExpiringFixedSizeNumberAnalysisQueue<Double> yq = new ExpiringFixedSizeNumberAnalysisQueue<Double>(siteQueueSize);
             ExpiringFixedSizeNumberAnalysisQueue<Double> zq = new ExpiringFixedSizeNumberAnalysisQueue<Double>(siteQueueSize);
-            LinkedList<ExpiringFixedSizeNumberAnalysisQueue<Double>> list = new LinkedList<>();
+            CopyOnWriteArrayList<ExpiringFixedSizeNumberAnalysisQueue<Double>> list = new CopyOnWriteArrayList<>();
             list.add(xq);
             list.add(yq);
             list.add(zq);
@@ -43,7 +44,7 @@ public class ToaApp {
         }
         UwbToa3D.uwbToaTF3D(entities, results);
         double x = results[0], y = results[1], z = results[2];
-        LinkedList<ExpiringFixedSizeNumberAnalysisQueue<Double>> list = siteQueueMap.get(siteQueueKey);
+        CopyOnWriteArrayList<ExpiringFixedSizeNumberAnalysisQueue<Double>> list = siteQueueMap.get(siteQueueKey);
         ExpiringFixedSizeNumberAnalysisQueue<Double> xq = list.get(0);
         ExpiringFixedSizeNumberAnalysisQueue<Double> yq = list.get(1);
         ExpiringFixedSizeNumberAnalysisQueue<Double> zq = list.get(2);
@@ -65,7 +66,7 @@ public class ToaApp {
             ExpiringFixedSizeNumberAnalysisQueue<Double> xq = new ExpiringFixedSizeNumberAnalysisQueue<Double>(siteQueueSize);
             ExpiringFixedSizeNumberAnalysisQueue<Double> yq = new ExpiringFixedSizeNumberAnalysisQueue<Double>(siteQueueSize);
             ExpiringFixedSizeNumberAnalysisQueue<Double> zq = new ExpiringFixedSizeNumberAnalysisQueue<Double>(siteQueueSize);
-            LinkedList<ExpiringFixedSizeNumberAnalysisQueue<Double>> list = new LinkedList<ExpiringFixedSizeNumberAnalysisQueue<Double>>();
+            CopyOnWriteArrayList<ExpiringFixedSizeNumberAnalysisQueue<Double>> list = new CopyOnWriteArrayList<ExpiringFixedSizeNumberAnalysisQueue<Double>>();
             list.add(xq);
             list.add(yq);
             list.add(zq);
@@ -128,7 +129,7 @@ public class ToaApp {
 //            UwbToa2D.uwbToaTF2D(entities,results);
 //            double x=results[0],y=results[1],z=1.8;
 //        }
-        LinkedList<ExpiringFixedSizeNumberAnalysisQueue<Double>> list = siteQueueMap.get(siteQueueKey);
+        CopyOnWriteArrayList<ExpiringFixedSizeNumberAnalysisQueue<Double>> list = siteQueueMap.get(siteQueueKey);
         ExpiringFixedSizeNumberAnalysisQueue<Double> xq = list.get(0);
         ExpiringFixedSizeNumberAnalysisQueue<Double> yq = list.get(1);
         ExpiringFixedSizeNumberAnalysisQueue<Double> zq = list.get(2);
@@ -150,59 +151,96 @@ public class ToaApp {
     // 缓存，用于均值滤波
     static Map<String, ExpiringFixedSizeQueue<PointEntity>> TAG_ID_TO_POINT_QUEUE_FOR_MEAN_MAP = new ConcurrentHashMap<>();
 
+    /**
+     * 对UWB实体列表进行2D坐标计算和滤波处理
+     * 
+     * @param uwbEntityList UWB实体列表
+     * @return 处理后的点实体列表
+     */
     public static List<PointEntity> uwbToaTF2DofList(List<UwbEntity> uwbEntityList) {
         // 窗口大小
-        int MEDIAN_WINDOW_SIZE = 1000;
-        long MEDIAN_WINDOW_MILLS_SIZE = 5000L;
-        int MEAN_WINDOW_SIZE = 1000;
-        long MEAN_WINDOW_MILLS_SIZE = 2000L;
+        final int MEDIAN_WINDOW_SIZE = 1000;
+        final long MEDIAN_WINDOW_MILLS_SIZE = 3000L;
+        final int MEAN_WINDOW_SIZE = 1000;
+        final long MEAN_WINDOW_MILLS_SIZE = 2000L;
+        
         // 排序
         uwbEntityList.sort(Comparator.comparingLong(UwbEntity::getTs));
-        List<PointEntity> resList = new ArrayList<>();
+        List<PointEntity> resList = new ArrayList<>(uwbEntityList.size());
+        
+        // 预先准备存储X和Y坐标的列表，避免在循环中重复创建
+        List<Double> xCoords = new ArrayList<>(MEDIAN_WINDOW_SIZE);
+        List<Double> yCoords = new ArrayList<>(MEDIAN_WINDOW_SIZE);
+        
         for (UwbEntity uwbEntity : uwbEntityList) {
             String tagId = uwbEntity.getTagId();
             String devId = uwbEntity.getDevId();
             long ts = uwbEntity.getTs();
+
             SiteQueueKey key = SiteQueueKey.builder().mainDevId(devId).tagNum(tagId).build();
             // 缓存uwbEntity
             KEY_TO_UWB_ENTITY_MAP.put(key, uwbEntity);
+
             // 从缓存中取出可用于计算的uwbEntity列表
             List<UwbEntity> uwbEntityForCalList = getUwbEntityForCalList(uwbEntity);
             if (uwbEntityForCalList.size() < 3) {
                 continue;
             }
+            
             // 计算坐标
             double[] results = {0, 0, 0};
             findBest2d(uwbEntityForCalList, results);
             double x = results[0];
             double y = results[1];
-            double z = results[2];
+            
             if (x == 0 || y == 0 || Double.isNaN(x) || Double.isNaN(y)) {
                 continue;
             }
+            
             PointEntity pointEntity = PointEntity.builder().x(x).y(y).ts(ts).tagId(tagId).devId(devId).build();
+            
             // 中值滤波
-            TAG_ID_TO_POINT_QUEUE_FOR_MEDIAN_MAP.putIfAbsent(tagId, new ExpiringFixedSizeQueue<>(MEDIAN_WINDOW_SIZE, MEDIAN_WINDOW_MILLS_SIZE));
+            TAG_ID_TO_POINT_QUEUE_FOR_MEDIAN_MAP.putIfAbsent(tagId, 
+                new ExpiringFixedSizeQueue<>(MEDIAN_WINDOW_SIZE, MEDIAN_WINDOW_MILLS_SIZE));
             ExpiringFixedSizeQueue<PointEntity> queueForMedian = TAG_ID_TO_POINT_QUEUE_FOR_MEDIAN_MAP.get(tagId);
             queueForMedian.add(pointEntity, ts);
-            if (!queueForMedian.isFull() && queueForMedian.getSize()<5) {
-                // 不够中值窗口，先不算
-                continue;
+            
+            // 重用列表避免重复创建
+            xCoords.clear();
+            yCoords.clear();
+            
+            // 收集坐标数据
+            for (PointEntity p : queueForMedian.toList()) {
+                xCoords.add(p.getX());
+                yCoords.add(p.getY());
             }
-            x = Filtering.getMedian(queueForMedian.toList().stream().map(PointEntity::getX).collect(Collectors.toList()));
-            y = Filtering.getMedian(queueForMedian.toList().stream().map(PointEntity::getY).collect(Collectors.toList()));
+            
+            x = Filtering.getMedian(xCoords);
+            y = Filtering.getMedian(yCoords);
+            
             pointEntity = PointEntity.builder().x(x).y(y).ts(ts).tagId(tagId).devId(devId).build();
+            
             // 均值滤波
-            TAG_ID_TO_POINT_QUEUE_FOR_MEAN_MAP.putIfAbsent(tagId, new ExpiringFixedSizeQueue<>(MEAN_WINDOW_SIZE, MEAN_WINDOW_MILLS_SIZE));
+            TAG_ID_TO_POINT_QUEUE_FOR_MEAN_MAP.putIfAbsent(tagId, 
+                new ExpiringFixedSizeQueue<>(MEAN_WINDOW_SIZE, MEAN_WINDOW_MILLS_SIZE));
             ExpiringFixedSizeQueue<PointEntity> queueForMean = TAG_ID_TO_POINT_QUEUE_FOR_MEAN_MAP.get(tagId);
             queueForMean.add(pointEntity, ts);
-            if (!queueForMean.isFull()) {
-                // 不够均值窗口，先不算
-                continue;
+            
+            // 重用列表避免重复创建
+            xCoords.clear();
+            yCoords.clear();
+            
+            // 收集坐标数据
+            for (PointEntity p : queueForMean.toList()) {
+                xCoords.add(p.getX());
+                yCoords.add(p.getY());
             }
-            x = Filtering.getMean(queueForMean.toList().stream().map(PointEntity::getX).collect(Collectors.toList()));
-            y = Filtering.getMean(queueForMean.toList().stream().map(PointEntity::getY).collect(Collectors.toList()));
+            
+            x = Filtering.getMean(xCoords);
+            y = Filtering.getMean(yCoords);
+            
             pointEntity = PointEntity.builder().x(x).y(y).ts(ts).tagId(tagId).devId(devId).build();
+            
             // 返回
             resList.add(pointEntity);
         }
@@ -210,6 +248,7 @@ public class ToaApp {
     }
 
     private static List<UwbEntity> getUwbEntityForCalList(UwbEntity uwbEntity) {
+        // 取当前点附近50ms的点计算
         int tsDif = 50;
         List<UwbEntity> uwbEntityForCalList = new ArrayList<>();
         long tsNow = uwbEntity.getTs();
@@ -283,7 +322,7 @@ public class ToaApp {
     }
 
     public static void init() {
-        siteQueueMap = new HashMap<>();
+        siteQueueMap = new ConcurrentHashMap<>();
     }
 
 
